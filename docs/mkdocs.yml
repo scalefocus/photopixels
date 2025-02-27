@@ -1,0 +1,18 @@
+site_name: My Docs
+site_description: PhotoPixels
+site_url: https://github.com/scalefocus/photopixels
+repo_url: https://github.com/scalefocus/photopixels
+
+theme: 
+  name: material
+
+nav:
+  - Home: index.md
+  - Quick Start: quickstart.md
+  - Requirements: requirements.md
+  - Server: server.md
+  - Clients: 
+      - Android: clients/android.md
+      - iOS: clients/iOS.md
+      - Web: clients/web.md      
+  - About: photopixels-about.md
