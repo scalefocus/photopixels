@@ -1,0 +1,188 @@
+- name: Set global environment variables
+  set_fact:
+    photopixels_data_volume: "{{Global_Env_Vars.data_volume}}/{{ Global_Env_Vars.environment }}"
+    photopixels_data_volume_logs: "{{Global_Env_Vars.data_volume}}/{{ Global_Env_Vars.environment }}{{ Global_Env_Vars.data_volume_logs }}"
+    photopixels_docker_network_name: "{{ Global_Env_Vars.docker_network_name }}{{ Global_Env_Vars.environment }}"
+    photopixels_docker_network_db_name: "{{ Global_Env_Vars.docker_network_db_name }}{{ Global_Env_Vars.environment }}"
+    ServerURL: "{{ FE_Env_Vars.Scheme }}://{{ Global_Env_Vars.environment }}.{{ FE_Env_Vars.Domain }}{{ FE_Env_Vars.APIPath }}"
+    nginx_container_name: "nginx-{{ Global_Env_Vars.environment }}"
+    nginx_port: "{{ 5000 + (Global_Env_Vars.environment | regex_search('\\d+') | int) }}"
+    backend_container_name: "backend-{{ Global_Env_Vars.environment }}"
+    backend_port: "{{ 8080 + (Global_Env_Vars.environment | regex_search('\\d+') | int) }}"
+    
+    frontend_container_name: "frontend-{{ Global_Env_Vars.environment }}"
+
+    pgsql_port: "{{ 5432 + (Global_Env_Vars.environment | regex_search('\\d+') | int) }}"
+    pgsql_container_name: "pgsql-{{ Global_Env_Vars.environment }}"
+
+
+- name: Environment connection string
+  set_fact:
+    environment_connectionString:
+      ConnectionStrings__PhotosMetadata: "Host={{ pgsql_container_name }};Port=5432;Database=photosdb;Username=postgres;Password=StrongDBPass_"
+
+- name: Show all set facts
+  ansible.builtin.debug:
+    msg:
+      - "photopixels_data_volume: {{ photopixels_data_volume }}"
+      - "photopixels_data_volume_logs: {{ photopixels_data_volume_logs }}"
+      - "photopixels_docker_network_name: {{ photopixels_docker_network_name }}"
+      - "photopixels_docker_network_db_name: {{ photopixels_docker_network_db_name }}"
+      - "ServerURL: {{ ServerURL }}"
+      - "nginx: {{ nginx_container_name }}:{{ nginx_port }}"
+      - "pgsql: {{ pgsql_container_name }}:{{ pgsql_port }}"
+      - "backend: {{ backend_container_name }}:{{ backend_port }}"
+      - "frontend: {{ frontend_container_name }}"
+      - "environment_connectionString: {{ environment_connectionString }}"
+
+# - name: Pause and wait for user input
+#   ansible.builtin.pause:
+#     prompt: "Execution paused. Press Enter to continue..."
+
+- name: Allow port nginx port through UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ nginx_port }}"  
+    proto: tcp
+
+- name: Create network for photopixels
+  community.docker.docker_network:
+    name: "{{ photopixels_docker_network_name }}"
+
+- name: Create network for photopixels db
+  community.docker.docker_network:
+    name: "{{ photopixels_docker_network_db_name }}"
+
+
+- name: Ensure photopixels data directory exists on the host
+  ansible.builtin.file:
+    path: "{{ photopixels_data_volume }}"
+    state: directory
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+    mode: '0755'
+
+- name: Ensure photopixels data web-container directory exists on the host
+  ansible.builtin.file:
+    path: "{{ photopixels_data_volume }}/web-container"
+    state: directory
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+    mode: '0755'
+
+- name: Ensure photopixels data log directory exists on the host
+  ansible.builtin.file:
+    path: "{{ photopixels_data_volume }}/logs"
+    state: directory
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+    mode: '0755'
+
+- name: Create Docker volume for photopixels data
+  community.docker.docker_volume:
+    name: photopixels_data_volume
+    state: present
+    driver: local
+    driver_options:
+      type: none
+      device: "{{ photopixels_data_volume }}"
+      o: bind
+
+- name: Start postgres container
+  community.docker.docker_container:
+    name: "{{ pgsql_container_name }}"
+    image: postgres:14.3
+    labels:
+      environment: "{{ Global_Env_Vars.environment }}"
+    networks:
+      - name: "{{ photopixels_docker_network_db_name }}"
+    ports:
+      - "{{ pgsql_port }}:5432"
+    env:
+      POSTGRES_DB: 'photosdb'
+      POSTGRES_PASSWORD: 'StrongDBPass_'
+    volumes:
+      - "{{ photopixels_data_volume }}/pgsql-container:/var/lib/postgresql/data"
+    restart_policy: always
+
+- name: Wait for postgresql to be ready
+  ansible.builtin.wait_for:
+    host: "localhost"
+    port: "{{ pgsql_port }}"
+    state: started
+    delay: 5
+    timeout: 60
+
+- name: Start backend container
+  community.docker.docker_container:
+    name: "{{ backend_container_name }}"
+    image: scalefocusad/photopixels-backend-net:0.9.24-beta
+    labels:
+      environment: "{{ Global_Env_Vars.environment }}"
+    networks:
+      - name: "{{ photopixels_docker_network_name }}"
+      - name: "{{ photopixels_docker_network_db_name }}"
+    ports:
+      - "{{ backend_port }}:8080"
+    env: "{{ BE_Env_Vars | combine(environment_connectionString) }}"
+    volumes:
+      - "{{ photopixels_data_volume }}/web-container:/var/data/sf-photos"
+      - "{{ photopixels_data_volume }}/logs:/var/log/photopixels"
+    restart_policy: always
+    links:
+      - "{{ pgsql_container_name }}"
+
+- name: Start frontend container
+  community.docker.docker_container:
+    name: "{{ frontend_container_name }}"
+    image: scalefocusad/photopixels-web:0.12.1-alpha
+    labels:
+      environment: "{{ Global_Env_Vars.environment }}"
+    networks:
+      - name: "{{ photopixels_docker_network_name }}"
+    env: 
+      SERVER_URL: "{{ ServerURL }}"
+    restart_policy: always
+    links:
+      - "{{ backend_container_name }}"
+
+- name: Wait for backend to be ready
+  ansible.builtin.wait_for:
+    host: "localhost"
+    port: "{{ backend_port }}"
+    state: started
+    delay: 5
+    timeout: 60
+
+- name: Ensure photopixels data nginx-config directory exists on the host
+  ansible.builtin.file:
+    path: "{{ photopixels_data_volume }}/nginx-container"
+    state: directory
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+    mode: '0755'
+
+- name: Template nginx config with dynamic values
+  ansible.builtin.template:
+    src: files/nginx/nginx.conf.j2   # Create this Jinja2 template in your files directory
+    dest: "{{ photopixels_data_volume }}/nginx-container/nginx.conf"
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+    mode: '0644'
+
+- name: Start nginx web container
+  community.docker.docker_container:
+    name: "{{ nginx_container_name }}"
+    image: nginx:1.25.2
+    labels:
+      environment: "{{ Global_Env_Vars.environment }}"
+    ports:
+      - "{{ nginx_port }}:80"
+    volumes:
+      - "{{ photopixels_data_volume }}/nginx-container/nginx.conf:/etc/nginx/nginx.conf"
+    networks:
+      - name:  "{{ photopixels_docker_network_name }}"
+    links:
+        - "{{ frontend_container_name }}"
+        - "{{ backend_container_name }}"
+    
