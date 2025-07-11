@@ -10,16 +10,21 @@ theme:
 
 nav:
   - Home: index.md
-  - Quick Start: quickstart.md
-  - Requirements: requirements.md
+  - Quick Start: Running/quickstart.md
+  - Requirements: Running/requirements.md
   - Documentation: mkdocs.md
   - Server: server.md
   - Clients: 
-      - Android: Frontends/android.md
-      - iOS: Frontends/iOS.md
-      - Web: Frontends/web.md  
+  
+      - Android: clients/android.md
+      - iOS: clients/iOS.md
+      - Web: clients/web.md
   - Developer Guide:
-      - Architecture: Developer/Backend/Migration.md
+      - Architecture: Developer/Backend/Migrations.md
       - Development Setup: Developer/Backend/Migration.md
       - Contributing: Developer/Backend/Migration.md   
+      - Clients : 
+          - Android: Developer/Frontends/Android/android.md
+          - iOS: Developer/Frontends/iOS/iOS.md
+          - Web: Developer/Frontends/Web/web.md
   - About: photopixels-about.md
