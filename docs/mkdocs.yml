@@ -4,6 +4,7 @@ repo_url: https://github.com/scalefocus/photopixels
 use_directory_urls: false
 site_url: https://scalefocus.github.io/photopixels/
 site_dir: site
+docs_dir: ./docs
 
 theme: 
   name: material
