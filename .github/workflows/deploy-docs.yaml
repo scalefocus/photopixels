@@ -1,29 +1,28 @@
-name: Deploy MkDocs
+name: Publish MkDocs site to GitHub Pages
 
 on:
   push:
     branches:
-      - main
+      - AnsibleAutomation
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Install MkDocs and Dependencies
+      - name: Install dependencies
         run: |
-          pip install mkdocs
-          pip install mkdocs-material  # Optional: Use a theme
+          pip install mkdocs mkdocs-material
 
-      - name: Build and Deploy MkDocs
+      - name: Build and deploy MkDocs site
         run: |
-          mkdocs build
-#          mkdocs gh-deploy --force
+          mkdocs gh-deploy --config-file docs/mkdocs.yml --force
