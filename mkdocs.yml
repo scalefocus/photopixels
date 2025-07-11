@@ -15,7 +15,6 @@ nav:
   - Documentation: mkdocs.md
   - Server: server.md
   - Clients: 
-  
       - Android: clients/android.md
       - iOS: clients/iOS.md
       - Web: clients/web.md
