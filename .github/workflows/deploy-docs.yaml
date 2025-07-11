@@ -29,4 +29,4 @@ jobs:
       
       - name: Build and deploy MkDocs site
         run: |
-          mkdocs gh-deploy 
+          mkdocs gh-deploy --force --config-file docs/mkdocs.yml
