@@ -22,7 +22,11 @@ jobs:
       - name: Install dependencies
         run: |
           pip install mkdocs mkdocs-material
-
+      
+      - name: Output current directory
+        run: | 
+          pwd
+      
       - name: Build and deploy MkDocs site
         run: |
           mkdocs gh-deploy --config-file docs/mkdocs.yml --force
