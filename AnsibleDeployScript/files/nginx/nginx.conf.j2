@@ -1,8 +1,8 @@
 events { }
 
 http {
-
-  map $http_upgrade $connection_upgrade {
+      include mime.types;
+      map $http_upgrade $connection_upgrade {
       default upgrade;
       ''      close;
   }
@@ -75,5 +75,11 @@ http {
         proxy_set_header X-Forwarded-Proto $the_scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
+    
+    location /docs {
+        alias {{ MKDocs.photopixels_nginx_docs_root_in_container }};
+        index index.html index.htm;
+        try_files $uri $uri/ /index.html;
+      }
   }
 }

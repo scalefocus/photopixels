@@ -1,7 +1,7 @@
 site_name: My Docs
 site_description: PhotoPixels
-site_url: https://github.com/scalefocus/photopixels
 repo_url: https://github.com/scalefocus/photopixels
+use_directory_urls: false
 
 theme: 
   name: material
@@ -10,9 +10,14 @@ nav:
   - Home: index.md
   - Quick Start: quickstart.md
   - Requirements: requirements.md
+  - Documentation: mkdocs.md
   - Server: server.md
   - Clients: 
-      - Android: clients/android.md
-      - iOS: clients/iOS.md
-      - Web: clients/web.md      
+      - Android: Frontends/android.md
+      - iOS: Frontends/iOS.md
+      - Web: Frontends/web.md  
+  - Developer Guide:
+      - Architecture: Developer/Backend/Migration.md
+      - Development Setup: Developer/Backend/Migration.md
+      - Contributing: Developer/Backend/Migration.md   
   - About: photopixels-about.md

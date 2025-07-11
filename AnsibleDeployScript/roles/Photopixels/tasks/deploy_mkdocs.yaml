@@ -1,0 +1,145 @@
+---
+
+- name: MkDocs Deployment | Ensure pip is installed in WSL
+  ansible.builtin.apt:
+    name: python3-pip
+    state: present
+    update_cache: yes
+  become: yes
+  delegate_to: localhost
+  run_once: true
+
+- name: MkDocs Deployment | Ensure MkDocs is installed in WSL
+  ansible.builtin.pip:
+    name: mkdocs
+    executable: pip3
+    extra_args: --break-system-packages
+  become: yes
+  delegate_to: localhost
+  run_once: true
+
+- name: MkDocs Deployment | Ensure mkdocs-material theme is installed in WSL
+  ansible.builtin.pip:
+    name: mkdocs-material
+    executable: pip3
+    extra_args: --break-system-packages
+  become: yes
+  delegate_to: localhost
+  run_once: true
+
+- name: MkDocs Deployment | Define compiled docs path on control node
+  ansible.builtin.set_fact:
+    _compiled_mkdocs_path_on_control_node: "{{ role_path }}/../../files/mkdocs/site"
+
+- name: MkDocs Deployment | Clean compiled docs folder on control node before build
+  ansible.builtin.file:
+    path: "{{ _compiled_mkdocs_path_on_control_node }}"
+    state: absent
+  delegate_to: localhost
+  run_once: true
+
+- name: MkDocs Deployment | Ensure MkDocs build target parent directory exists on control node
+  ansible.builtin.file:
+    path: "{{ role_path }}/files/mkdocs" # Parent directory for 'site'
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  run_once: true
+
+- name: MkDocs Deployment | Compile MkDocs documentation on control node
+  ansible.builtin.command:
+    cmd: "mkdocs build --site-dir {{ _compiled_mkdocs_path_on_control_node }} --clean --no-directory-urls"
+    chdir: "{{ MKDocs.photopixels_mkdocs_source_dir }}" # Directory containing your mkdocs.yml
+  delegate_to: localhost
+  run_once: true
+  register: mkdocs_build_result
+  # changed_when: mkdocs_build_result == 0 # Consider successful build as a change
+  # failed_when: mkdocs_build_result != 0
+  #args:
+  #  warn: false # Suppress Ansible warnings about chdir if path isn't always resolvable during linting
+
+- name: Debug mkdocs_build_result
+  ansible.builtin.debug:
+    var: mkdocs_build_result
+  delegate_to: localhost
+  run_once: true
+
+- name: MkDocs Deployment | Debug compiled path
+  ansible.builtin.debug:    
+    msg: "Compiled MkDocs to: {{ _compiled_mkdocs_path_on_control_node }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: MkDocs Deployment | Clean docs folder on remote host before copy
+  ansible.builtin.file:
+    path: "{{ photopixels_data_volume }}/docs/"
+    state: absent
+  run_once: true
+
+- name: MkDocs Deployment | Copy compiled MkDocs site to remote host
+  ansible.builtin.copy:
+    src: "{{ _compiled_mkdocs_path_on_control_node }}/"
+    dest: "{{ photopixels_data_volume }}/docs/"
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+    mode: '0755'
+    remote_src: no
+  run_once: true
+
+# - name: MkDocs Deployment | Template Nginx config for MkDocs to a temporary local file
+#   ansible.builtin.template:
+#     src: "files/nginx/nginx_mkdocs.conf.j2" # Will look in roles/Photopixels/templates/
+#     dest: "/tmp/{{ MKDocs.photopixels_nginx_mkdocs_conf_filename }}" # Temporary path on control node
+#     mode: '0644'
+#   delegate_to: localhost
+#   run_once: true # Only one template needs to be generated
+#   vars:
+#     # Pass specific variables to the template for clarity and safety
+#     nginx_docs_root_for_template: "{{ MKDocs.photopixels_nginx_docs_root_in_container }}"
+
+# - name: MkDocs Deployment | Copy Nginx config for MkDocs to host
+#   ansible.builtin.copy:
+#     src: "/tmp/{{ MKDocs.photopixels_nginx_mkdocs_conf_filename }}"
+#     dest: "{{ photopixels_data_volume }}/nginx-container/{{ MKDocs.photopixels_nginx_mkdocs_conf_filename }}"
+#     owner: "{{ ansible_user | default('root') }}"
+#     group: "{{ ansible_user | default('root') }}"
+#     mode: '0644'
+#   run_once: true
+
+- name: Ensure docs directory is world-readable and executable
+  ansible.builtin.file:
+    path: "{{ photopixels_data_volume }}/docs/"
+    state: directory
+    recurse: yes
+    mode: '0755'
+
+- name: MkDocs Deployment | Add docs volume to Nginx container
+  community.docker.docker_container:
+    name: "{{ nginx_container_name }}"
+    volumes:
+      - "{{ photopixels_data_volume }}/docs/:{{ MKDocs.photopixels_nginx_docs_root_in_container }}:ro"
+  # Only the volume is managed here; other container settings remain unchanged
+
+- name: MkDocs Deployment | Remove temporary Nginx config from control node
+  ansible.builtin.file:
+    path: "/tmp/{{ MKDocs.photopixels_nginx_mkdocs_conf_filename }}"
+    state: absent
+  delegate_to: localhost
+  run_once: true
+
+- name: MkDocs Deployment | Reload Nginx in the container
+  community.docker.docker_container_exec:
+    container: "{{ nginx_container_name }}"
+    command: "nginx -s reload"
+  register: nginx_reload_result
+  changed_when: nginx_reload_result.rc == 0 # Successful reload implies a change or state enforcement
+  failed_when: nginx_reload_result.rc != 0
+
+
+
+
+
+
+
+
+

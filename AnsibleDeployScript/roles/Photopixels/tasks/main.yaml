@@ -78,6 +78,15 @@
     group: "{{ ansible_user | default('root') }}"
     mode: '0755'
 
+- name: Ensure photopixels data docs directory exists on the host
+  ansible.builtin.file:
+    path: "{{ photopixels_data_volume }}/docs"
+    state: directory
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+    mode: '0755'
+
+
 - name: Create Docker volume for photopixels data
   community.docker.docker_volume:
     name: photopixels_data_volume
@@ -170,6 +179,11 @@
     group: "{{ ansible_user | default('root') }}"
     mode: '0644'
 
+- name: Deploy MkDocs Documentation
+  ansible.builtin.include_tasks: deploy_mkdocs.yaml
+  # You can add a condition here if you want to make docs deployment optional
+  # when: deploy_documentation_flag | default(true)
+
 - name: Start nginx web container
   community.docker.docker_container:
     name: "{{ nginx_container_name }}"
@@ -180,6 +194,7 @@
       - "{{ nginx_port }}:80"
     volumes:
       - "{{ photopixels_data_volume }}/nginx-container/nginx.conf:/etc/nginx/nginx.conf"
+      - "{{ photopixels_data_volume }}/docs/:{{ MKDocs.photopixels_nginx_docs_root_in_container }}/"
     networks:
       - name:  "{{ photopixels_docker_network_name }}"
     links:

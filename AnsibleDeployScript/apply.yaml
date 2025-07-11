@@ -3,16 +3,16 @@
   hosts: photopixels-server
   become: yes
   roles:
-    - role: UFW
-      tasks_from: 
-        - Ensure UFW is installed
-    - role: Docker
-    - role: Maintenance
-      tasks_from: 
-        - Update apt cache
-        - Upgrade all packages to the latest version
+    # - role: UFW
+    #   tasks_from: 
+    #     - Ensure UFW is installed
+    # - role: Docker
+    # - role: Maintenance
+    #   tasks_from: 
+    #     - Update apt cache
+    #     - Upgrade all packages to the latest version
     - role: Photopixels
-    - role: UFW
-      tasks_from: 
-        - Enable UFW
+    # - role: UFW
+    #   tasks_from: 
+    #     - Enable UFW
         

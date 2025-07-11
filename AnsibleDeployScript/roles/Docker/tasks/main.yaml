@@ -12,3 +12,10 @@
     name: docker
     state: started
     enabled: true
+
+- name: Ensure community.docker collection is installed on control node
+  ansible.builtin.command: ansible-galaxy collection install community.docker
+  changed_when: false # ansible-galaxy install is idempotent but doesn't have a clean 'changed' state
+  delegate_to: localhost
+  run_once: true
+  tags: always # Ensure this runs even if specific tags are used for the main play
