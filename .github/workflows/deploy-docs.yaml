@@ -25,7 +25,7 @@ jobs:
       
       - name: Output current directory
         run: | 
-          pwd
+          ls -al 
       
       - name: Build and deploy MkDocs site
         run: |
