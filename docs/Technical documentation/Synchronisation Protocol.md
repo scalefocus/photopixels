@@ -67,7 +67,7 @@ Revisions are sequential and monotonic — ensuring reliable ordering of events.
 
 
 For example:
-```sql
+```
 400 → user creates Album A
 405 → user uploads Photo X
 420 → user deletes Photo X
@@ -133,7 +133,67 @@ When the client syncs from revision 490 to 520, the photo never needs to appear 
 ```
 The protocol collapses **intermediate states**, ensuring the client doesn’t waste resources processing transient transitions that are no longer relevant.
 
-#### Add an image to album
- Revision |   	Event Type       | 	      Description      |
-|---------|----------------------|-------------------------|
- 500	  | ObjectToAlbumCreated | Photo added to an album |
+#### Album object
+Each album is having its own stream with the id of the album. All operations that are happening inside the album are under this stream. Right now the only supported operations are: object_to_album_created and object_to_album_deleted.
+
+Here the rule that during synchronization is returned only the delta is kept again.
+
+#### Image is created and then deleted
+
+```json
+{
+  "id": "7945d258-c138-4879-aac5-7b451fb8330d",
+  "version": 2,
+  "added": {},
+  "removed": []
+}
+```
+The image is not returned, because the client doesn't need to know about it (it has been deleted) in the same interval
+
+#### Image is created and then deleted
+
+```json
+{
+  "id": "7945d258-c138-4879-aac5-7b451fb8330d",
+  "version": 2,
+  "added": {},
+  "removed": []
+}
+```
+
+#### Image has been uploaded
+```json
+{
+  "id": "7945d258-c138-4879-aac5-7b451fb8330d",
+  "version": 1,
+  "added": {
+    "LxupogrmzYtwlMITV3T4WPiNX_M": 1762509265291
+  },
+  "removed": []
+}
+```
+
+#### Image has been removed from the album
+```json
+{
+  "id": "7945d258-c138-4879-aac5-7b451fb8330d",
+  "version": 1,
+  "added": {},
+  "removed": ["LxupogrmzYtwlMITV3T4WPiNX_M"]
+}
+```
+
+#### Remove image from an album
+```json
+{
+  "id": "7945d258-c138-4879-aac5-7b451fb8330d",
+  "version": 1,
+  "added": {},
+  "removed": ["LxupogrmzYtwlMITV3T4WPiNX_M"]
+}
+```
+
+#### Deleting an image
+When an image is deleted, no matter from which source (from main gallery, from the current album, from another album), there are multiple events that have been raised:
+- **One event in the main user stream** which indicates that the images is deleted
+- **An event per album** in which the image belongs to, to indicate that this image is no longer available in the album
