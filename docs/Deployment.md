@@ -45,10 +45,11 @@ ssh <USERNAME>@photopixels.scalefocus.dev
 ```
 - To obtain the username ask the devops or Boris to create account and credentials to photopixels.scalefocus.dev. You will also need and SSH keys for this
 
-5. Obtain administrator privilege
+5. Obtain administrator privilege by executing
 ```shell
-sudo su <admin password provided by the devops>
+sudo su
 ```
+Then ot the following prompt `[sudo] password for <USERNAME>: ` you should enter the `<admin password provided by the devops>`
 
 6. Go to the dev server apps
 ```shell
@@ -78,3 +79,9 @@ vim docker-compose.yml
 docker compose up - d <app name>
 ```
 - app name can be **"backend"** or **"frontend"** (see the docker compose file for the app names)
+
+11.  Leave the system
+```shell
+exit
+logout
+```
